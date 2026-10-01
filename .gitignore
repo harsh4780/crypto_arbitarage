@@ -1,0 +1,20 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+/src/generated/prisma
+
+# Python cache & build
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+logs/
+
+# Arbitrage local logs & data
+*.csv
+
+# Tooling
+.agents/
+.claude/
+.windsurf/

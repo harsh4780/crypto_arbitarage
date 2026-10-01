@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQL EA Arbitrage Terminal - Currency & Expiry Control</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN for real-time streaming chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lightweight Charts CDN for TradingView Candlestick Chart -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header Nav -->
+        <header class="navbar">
+            <div class="logo">
+                <span class="logo-icon">⚡</span>
+                <div class="logo-text">
+                    <h1>MQL EA Arbitrage Dashboard</h1>
+                    <span class="subtitle">MT5 Spot vs <span id="headerExchangeTag">BYBIT FUTURES (DEMO)</span></span>
+                </div>
+            </div>
+            
+            <div class="status-bar">
+                <!-- Currency Toggle Selector (BTC vs ETH) -->
+                <div class="currency-selector">
+                    <button class="currency-btn active" id="btnCurrencyBTC" onclick="switchCurrency('BTC')">₿ BTC</button>
+                    <button class="currency-btn" id="btnCurrencyETH" onclick="switchCurrency('ETH')">⟠ ETH</button>
+                </div>
+
+                <!-- Exchange Toggle Selector -->
+                <div class="exchange-selector">
+                    <button class="exchange-btn active" id="btnExchangeBinance" onclick="switchExchangeSource('binance')">🔶 Binance (Demo)</button>
+                    <button class="exchange-btn" id="btnExchangeBybit" onclick="switchExchangeSource('bybit')">🟡 Bybit</button>
+                    <button class="exchange-btn" id="btnExchangeDeribit" onclick="switchExchangeSource('deribit')">🏛️ Deribit</button>
+                    <button class="exchange-btn" id="btnExchangeDelta" onclick="switchExchangeSource('delta')">🔺 Delta</button>
+                </div>
+
+                <!-- Testnet Demo Toggle -->
+                <div class="testnet-toggle-box" id="testnetToggleBox">
+                    <button class="testnet-btn active" id="btnToggleTestnet" onclick="toggleTestnetMode()" title="Toggle Testnet / Live">🟡 Testnet (Demo)</button>
+                </div>
+
+                <!-- Contract Expiry Dropdown Selector -->
+                <div class="contract-selector" id="contractSelectorBox">
+                    <label class="contract-lbl">📅 Contract:</label>
+                    <select id="selectContractDropdown" class="form-select contract-select" onchange="onContractSelected()">
+                        <option value="">Loading contracts...</option>
+                    </select>
+                </div>
+
+                <div class="status-indicator">
+                    <span class="dot pulse-green" id="wsDot"></span>
+                    <span id="wsStatus">Connected</span>
+                </div>
+                <div class="time-box" id="liveClock">00:00:00</div>
+                <button class="btn btn-secondary" onclick="openCredentialsModal()">🔑 Connect API</button>
+            </div>
+        </header>
+
+        <!-- EA Gap Settings & Fire Control Bar -->
+        <div class="card ea-control-bar">
+            <div class="ea-title">
+                <h3>⚙️ Arbitrage EA Gap Parameters (diffToTrade / diffToCut)</h3>
+                <span class="subtext">Set your entry & exit gap points for automated or manual execution</span>
+            </div>
+            <div class="ea-inputs-grid">
+                <div class="ea-input-box">
+                    <label>Open Gap Points ($) <span class="badge-blue">diffToTrade</span></label>
+                    <input type="number" step="1.0" id="inputDiffToTrade" value="4.0" onchange="applyEaSettings()">
+                </div>
+                <div class="ea-input-box">
+                    <label>Close Cut Gap ($) <span class="badge-amber">diffToCut</span></label>
+                    <input type="number" step="0.5" id="inputDiffToCut" value="0.5" onchange="applyEaSettings()">
+                </div>
+                <div class="ea-input-box">
+                    <label>Net TP Target ($) <span class="badge-green">Clean Net</span></label>
+                    <input type="number" step="0.25" id="inputTargetProfit" value="1.00" onchange="applyEaSettings()" title="Net profit after all taker/maker fees, spread, and slippage">
+                </div>
+                <div class="ea-input-box">
+                    <label>Trade Size (Lots)</label>
+                    <input type="number" step="0.05" id="inputTradeSize" value="0.1" onchange="applyEaSettings()">
+                </div>
+                <div class="ea-input-box toggle-box">
+                    <label>Auto-Trade Firing</label>
+                    <button class="auto-trade-toggle" id="btnAutoTrade" onclick="toggleAutoTrade()">OFF</button>
+                </div>
+                <div class="ea-action-btns">
+                    <button class="btn btn-fire" onclick="fireManualOrder()">⚡ FIRE ORDER NOW</button>
+                    <button class="btn btn-close-all" onclick="closeAllPositions()">🔴 CLOSE ALL</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signal Alert Banner -->
+        <div id="signalBanner" class="signal-banner neutral">
+            <div class="signal-icon" id="signalIcon">⏳</div>
+            <div class="signal-info">
+                <h3 id="signalTitle">MONITORING LIVE GAP POINTS</h3>
+                <p id="signalDetail">Comparing MT5 Spot & Futures Prices real-time...</p>
+            </div>
+            <div class="signal-metric">
+                <span class="label">CURRENT LIVE GAP</span>
+                <span class="value" id="signalLiveGap">$0.00</span>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Grid -->
+        <main class="dashboard-grid">
+            <!-- Market Live Quote Cards -->
+            <div class="card market-card mt5-card">
+                <div class="card-header">
+                    <div class="exchange-tag"><span class="badge-blue">MT5 SPOT</span></div>
+                    <span class="symbol-name" id="mt5Symbol">BTCUSD</span>
+                </div>
+                <div class="price-display">
+                    <div class="main-price" id="mt5MidPrice">$0.00</div>
+                    <div class="label-mid">Mid Spot Price</div>
+                </div>
+                <div class="orderbook-mini">
+                    <div class="bid-box">
+                        <span class="lbl">BID</span>
+                        <span class="val text-green" id="mt5Bid">$0.00</span>
+                    </div>
+                    <div class="spread-box">
+                        <span class="lbl">SPREAD</span>
+                        <span class="val text-purple" id="mt5Spread">$0.00</span>
+                    </div>
+                    <div class="ask-box">
+                        <span class="lbl">ASK</span>
+                        <span class="val text-red" id="mt5Ask">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spread Metrics Card -->
+            <div class="card metrics-card">
+                <div class="card-header">
+                    <h3>⚡ Spread & Gap Gauge</h3>
+                    <span class="badge-purple" id="spreadBadge">+0.00% Basis</span>
+                </div>
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <span class="metric-label">Live Running Gap ($)</span>
+                        <span class="metric-val text-green" id="spreadUsd">$0.00</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Basis Yield (%)</span>
+                        <span class="metric-val text-blue" id="spreadPct">+0.00%</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">MT5 Spot Spread</span>
+                        <span class="metric-val text-amber" id="metricSpotSpread">$0.00</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Futures Spread</span>
+                        <span class="metric-val text-purple" id="metricFuturesSpread">$0.00</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Executable Gap (Net)</span>
+                        <span class="metric-val text-green" id="spreadBuySpot" title="Futures Bid minus Spot Ask">$0.00</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Active Trade Pairs</span>
+                        <span class="metric-val text-amber" id="activePairsCount">0 Pairs</span>
+                    </div>
+                    <span id="dispDiffToTrade" style="display:none;"></span>
+                    <span id="dispDiffToCut" style="display:none;"></span>
+                </div>
+            </div>
+
+            <!-- Futures Live Quote Card -->
+            <div class="card market-card futures-card">
+                <div class="card-header">
+                    <div class="exchange-tag"><span class="badge-amber" id="futuresBadge">DERIBIT FUTURES</span></div>
+                    <span class="symbol-name" id="deltaSymbol">BTC-25DEC26</span>
+                </div>
+                <div class="price-display">
+                    <div class="main-price" id="deltaMidPrice">$0.00</div>
+                    <div class="label-mid">Mid Futures Price</div>
+                </div>
+                <div class="orderbook-mini">
+                    <div class="bid-box">
+                        <span class="lbl">BID</span>
+                        <span class="val text-green" id="deltaBid">$0.00</span>
+                    </div>
+                    <div class="spread-box">
+                        <span class="lbl">SPREAD</span>
+                        <span class="val text-purple" id="deltaSpread">$0.00</span>
+                    </div>
+                    <div class="ask-box">
+                        <span class="lbl">ASK</span>
+                        <span class="val text-red" id="deltaAsk">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-Time Chart Card -->
+            <div class="card chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <h3>📈 Real-Time Live Price, Gap & Candlestick Chart</h3>
+                        <span class="subtext" id="chartSubtext">Comparing live tick updates from MT5 & Deribit</span>
+                    </div>
+                    <div class="chart-controls">
+                        <button class="toggle-btn active" id="btnPriceChart" onclick="showChart('price')">Prices</button>
+                        <button class="toggle-btn" id="btnSpreadChart" onclick="showChart('spread')">Gap ($)</button>
+                        <button class="toggle-btn" id="btnCandleChart" onclick="showChart('candle')">⚡ Spread Candle (OHLC 🕯️)</button>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="liveChart"></canvas>
+                    <div id="candlestickContainer" style="display: none; width: 100%; height: 280px;"></div>
+                </div>
+            </div>
+
+            <!-- Active Open Positions & Signals Log -->
+            <div class="card logs-card">
+                <div class="card-header">
+                    <h3>📑 Active Positions & Executed Trades</h3>
+                    <span class="subtext" id="logCount">0 positions</span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time / ID</th>
+                                <th>Spot Price</th>
+                                <th>Fut Price</th>
+                                <th>Entry Gap</th>
+                                <th>Signal</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No active open positions... Set Open Gap & click Fire Order!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- Credentials Modal -->
+        <div id="credentialsModal" class="modal-backdrop hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3>🔑 API Key Credentials</h3>
+                    <button class="close-btn" onclick="closeCredentialsModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Target Exchange</label>
+                        <select id="inputExchangeType" class="form-select" onchange="onExchangeCredChange()">
+                            <option value="binance">Binance Futures (Demo Testnet / Live)</option>
+                            <option value="bybit">Bybit V5 (Demo Testnet / Live)</option>
+                            <option value="deribit">Deribit (Client ID & Secret)</option>
+                            <option value="delta">Delta Exchange (API Key & Secret)</option>
+                        </select>
+                    </div>
+                    <div id="bybitCredInfo" class="alert-box" style="margin-bottom: 12px; font-size: 0.8rem; background: rgba(247, 166, 0, 0.1); border-left: 3px solid #f7a600; color: #f0f6fc;">
+                        <span>💡 For free Bybit Demo Trading, generate API Key on <a href="https://testnet.bybit.com/en/profile/api-management" target="_blank" style="color: #f7a600; text-decoration: underline; font-weight: 600;">testnet.bybit.com</a> with <strong>Read-Write</strong> & <strong>Orders</strong> permissions.</span>
+                    </div>
+                    <div class="form-group">
+                        <label id="lblApiKey">Bybit API Key</label>
+                        <input type="text" id="inputApiKey" placeholder="e.g. gNc6EV3kHDZ1E2rF...">
+                    </div>
+                    <div class="form-group">
+                        <label id="lblApiSecret">Bybit API Secret</label>
+                        <input type="password" id="inputApiSecret" placeholder="e.g. iql86ce5I4R93nc...">
+                    </div>
+                    <div id="credResult" class="alert-box hidden"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeCredentialsModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveCredentials()">Save & Verify Credentials</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

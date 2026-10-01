@@ -1,0 +1,122 @@
+{
+  "2179": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_1",
+    "open_time": "2026-09-14T06:19:15.892612+00:00",
+    "open_gap": 40.66
+  },
+  "2178": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_1",
+    "open_time": "2026-09-14T06:19:15.892612+00:00",
+    "open_gap": 40.66
+  },
+  "2180": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_2",
+    "open_time": "2026-09-14T06:19:16.282143+00:00",
+    "open_gap": 40.72
+  },
+  "2181": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_2",
+    "open_time": "2026-09-14T06:19:16.282143+00:00",
+    "open_gap": 40.72
+  },
+  "2183": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_3",
+    "open_time": "2026-09-14T06:19:16.669077+00:00",
+    "open_gap": 40.74
+  },
+  "2182": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_3",
+    "open_time": "2026-09-14T06:19:16.669077+00:00",
+    "open_gap": 40.74
+  },
+  "2185": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_4",
+    "open_time": "2026-09-14T06:19:17.165131+00:00",
+    "open_gap": 40.77
+  },
+  "2184": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_4",
+    "open_time": "2026-09-14T06:19:17.165131+00:00",
+    "open_gap": 40.77
+  },
+  "2187": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_5",
+    "open_time": "2026-09-14T06:19:17.712490+00:00",
+    "open_gap": 40.73
+  },
+  "2186": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_5",
+    "open_time": "2026-09-14T06:19:17.712490+00:00",
+    "open_gap": 40.73
+  },
+  "2188": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_1",
+    "open_time": "2026-09-14T06:19:48.866058+00:00",
+    "open_gap": 40.79
+  },
+  "2189": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_1",
+    "open_time": "2026-09-14T06:19:48.866058+00:00",
+    "open_gap": 40.79
+  },
+  "2191": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_2",
+    "open_time": "2026-09-14T06:19:49.049726+00:00",
+    "open_gap": 40.79
+  },
+  "2190": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_2",
+    "open_time": "2026-09-14T06:19:49.049726+00:00",
+    "open_gap": 40.79
+  },
+  "2192": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_3",
+    "open_time": "2026-09-14T06:19:49.249428+00:00",
+    "open_gap": 40.71
+  },
+  "2193": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_3",
+    "open_time": "2026-09-14T06:19:49.249428+00:00",
+    "open_gap": 40.71
+  },
+  "2195": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_4",
+    "open_time": "2026-09-14T06:19:49.514503+00:00",
+    "open_gap": 40.77
+  },
+  "2194": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_4",
+    "open_time": "2026-09-14T06:19:49.514503+00:00",
+    "open_gap": 40.77
+  },
+  "2204": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_5",
+    "open_time": "2026-09-14T06:19:51.791833+00:00",
+    "open_gap": 40.81
+  },
+  "2205": {
+    "magic": 888,
+    "comment": "BUY_GRID_LVL_5",
+    "open_time": "2026-09-14T06:19:51.791833+00:00",
+    "open_gap": 40.81
+  }
+}
