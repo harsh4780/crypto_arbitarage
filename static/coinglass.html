@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coinglass Style Arbitrage Spike & Gap Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #07090e;
+      color: #e2e8f0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #0d1117;
+      border-bottom: 1px solid #1e293b;
+      padding: 8px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      letter-spacing: 0.5px;
+    }
+    .title-group h1 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .title-group p {
+      font-size: 11px;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .currency-switch {
+      display: flex;
+      align-items: center;
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .currency-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .currency-btn.active {
+      background: #3b82f6;
+      color: #ffffff;
+    }
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .stat-pill {
+      background: #111827;
+      border: 1px solid #1f2937;
+      padding: 4px 9px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .stat-pill .label {
+      font-size: 9px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-pill .value {
+      font-size: 12px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: #ffffff;
+    }
+    .stat-pill .value.green { color: #10b981; }
+    .stat-pill .value.red { color: #ef4444; }
+    .stat-pill .value.blue { color: #38bdf8; }
+    .stat-pill .value.yellow { color: #f59e0b; }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    button, select {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    button:hover, select:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+    button.btn-accent {
+      background: #0284c7;
+      border-color: #0ea5e9;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    button.btn-accent:hover {
+      background: #0369a1;
+    }
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 3px 8px;
+      border-radius: 10px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+    .status-dot.connected {
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+    }
+    #chart-container {
+      flex: 1;
+      width: 100%;
+      min-height: calc(100vh - 70px);
+      background-color: #07090e;
+    }
+    .back-link {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: color 0.2s;
+    }
+    .back-link:hover {
+      color: #f8fafc;
+    }
+
+    /* Modal Styling */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 16px;
+    }
+    .modal-backdrop.hidden {
+      display: none;
+    }
+    .modal-card {
+      background: #0d1117;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    .modal-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h3 {
+      font-size: 15px;
+      color: #f8fafc;
+      font-weight: 700;
+    }
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .close-btn:hover {
+      color: #ffffff;
+    }
+    .modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    table.daily-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    table.daily-table th {
+      text-align: left;
+      padding: 10px 12px;
+      background: #111827;
+      color: #94a3b8;
+      border-bottom: 1px solid #1e293b;
+      font-size: 11px;
+    }
+    table.daily-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #161f2e;
+      color: #e2e8f0;
+    }
+    table.daily-table tr:hover td {
+      background: #111827;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .badge-yellow { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .badge-blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand-section">
+      <a href="/" class="back-link">← Terminal</a>
+      <span class="logo-badge">COINGLASS SPIKE</span>
+      <div class="title-group">
+        <h1 id="chart-title">Arbitrage Spikes & Gap Tracker</h1>
+        <p id="chart-subtitle">Today's Session Max & Min Volatility</p>
+      </div>
+      <div class="currency-switch">
+        <button class="currency-btn active" id="btn-eth" onclick="switchCurrency('ETH')">⟠ ETH</button>
+        <button class="currency-btn" id="btn-btc" onclick="switchCurrency('BTC')">₿ BTC</button>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-pill">
+        <span class="label">Price (Spot)</span>
+        <span class="value" id="stat-price">$0.00</span>
+      </div>
+      <div class="stat-pill">
+        <span class="label">Current Gap ($)</span>
+        <span class="value blue" id="stat-spread">$0.00</span>
+      </div>
+      <div class="stat-pill">
+        <span class="label">Today's High (Max)</span>
+        <span class="value green" id="stat-gap-max">$0.00</span>
+      </div>
+      <div class="stat-pill">
+        <span class="label">Today's Low (Min)</span>
+        <span class="value red" id="stat-gap-min">$0.00</span>
+      </div>
+      <div class="stat-pill">
+        <span class="label">Today's Range</span>
+        <span class="value yellow" id="stat-gap-range">$0.00</span>
+      </div>
+      <div class="stat-pill">
+        <span class="label">Baseline (Mean)</span>
+        <span class="value" id="stat-baseline">$0.00</span>
+      </div>
+      <div class="stat-pill">
+        <span class="label">Spike Deviation</span>
+        <span class="value" id="stat-dev">+$0.00</span>
+      </div>
+      <div class="stat-pill">
+        <span class="label">Today Ticks</span>
+        <span class="value" id="stat-count">0</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <select id="mode-select">
+        <option value="deviation" selected>⚡ Spikes Deviation (Coinglass Oscillating ±$)</option>
+        <option value="raw_usd">Raw Gap ($)</option>
+        <option value="pct">Gap Yield (%)</option>
+      </select>
+      <button class="btn-accent" onclick="openDailyHistoryModal()">📅 Daily Records List</button>
+      <button id="btn-sync">Sync DB</button>
+      <div class="status-indicator">
+        <span class="status-dot" id="ws-dot"></span>
+        <span id="ws-text">DISCONNECTED</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="chart-container"></div>
+
+  <!-- Day-by-Day Historical Records Modal -->
+  <div id="dailyHistoryModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title">📅 Day-by-Day Gap High / Low History (ETH)</h3>
+        <button class="close-btn" onclick="closeDailyHistoryModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <table class="daily-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Currency</th>
+              <th>Day High (Max)</th>
+              <th>Day Low (Min)</th>
+              <th>Day Range</th>
+              <th>Average Gap</th>
+              <th>Total Ticks</th>
+            </tr>
+          </thead>
+          <tbody id="daily-table-body">
+            <tr><td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">Loading historical daily summaries...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chartDom = document.getElementById('chart-container');
+    const myChart = echarts.init(chartDom, 'dark', { renderer: 'canvas' });
+
+    let activeCurrency = 'ETH';
+    let currentMode = 'deviation'; // 'deviation', 'raw_usd', 'pct'
+
+    // Buffers
+    let timestamps = [];
+    let priceData = [];
+    let rawSpreadData = [];
+    let deviationData = [];
+    let pctData = [];
+
+    // Strictly TODAY'S Gap High / Low
+    let todayMaxGap = -Infinity;
+    let todayMinGap = Infinity;
+    let baselineEma = 0.0;
+    let baselineInitialized = false;
+
+    function buildOption() {
+      let seriesData = [];
+      let seriesLabel = 'Spike Deviation ($)';
+      let yAxisFormatter = '{value}';
+
+      if (currentMode === 'deviation') {
+        seriesData = deviationData;
+        seriesLabel = 'Spike Deviation (±$)';
+        yAxisFormatter = function(v) {
+          return (v >= 0 ? '+' : '') + v.toFixed(2);
+        };
+      } else if (currentMode === 'raw_usd') {
+        seriesData = rawSpreadData;
+        seriesLabel = 'Raw Gap ($)';
+        yAxisFormatter = '${value}';
+      } else {
+        seriesData = pctData;
+        seriesLabel = 'Gap Yield (%)';
+        yAxisFormatter = '{value}%';
+      }
+
+      return {
+        backgroundColor: '#07090e',
+        animation: false,
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'cross',
+            lineStyle: { color: '#475569', type: 'dashed' },
+            crossStyle: { color: '#94a3b8' }
+          },
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          borderColor: '#334155',
+          borderWidth: 1,
+          textStyle: { color: '#f8fafc', fontFamily: 'JetBrains Mono', fontSize: 12 },
+          formatter: function(params) {
+            if (!params || !params.length) return '';
+            let header = `<div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">${params[0].axisValue} [${activeCurrency}]</div>`;
+            let rows = '';
+            params.forEach(p => {
+              let val = p.value;
+              let formattedVal = '';
+              if (p.seriesName.includes('Price')) {
+                formattedVal = '$' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              } else if (currentMode === 'pct') {
+                formattedVal = (val >= 0 ? '+' : '') + Number(val).toFixed(4) + '%';
+              } else {
+                formattedVal = (val >= 0 ? '+$' : '-$') + Math.abs(Number(val)).toFixed(2);
+              }
+              rows += `<div style="display:flex; justify-content:space-between; gap:16px; margin-top:2px;">
+                <span style="color:${p.color}">● ${p.seriesName}:</span>
+                <span style="font-weight:bold; color:#fff;">${formattedVal}</span>
+              </div>`;
+            });
+            return header + rows;
+          }
+        },
+        legend: {
+          top: 12,
+          data: ['Price', seriesLabel],
+          textStyle: { color: '#cbd5e1', fontFamily: 'Inter', fontSize: 13, fontWeight: 600 },
+          itemWidth: 14,
+          itemHeight: 14
+        },
+        grid: {
+          top: 60,
+          left: 75,
+          right: 75,
+          bottom: 80
+        },
+        xAxis: {
+          type: 'category',
+          data: timestamps,
+          scale: true,
+          axisLine: { lineStyle: { color: '#1e293b' } },
+          axisLabel: { color: '#64748b', fontFamily: 'JetBrains Mono', fontSize: 11 },
+          splitLine: { show: true, lineStyle: { color: '#0f172a', type: 'dashed' } }
+        },
+        yAxis: [
+          {
+            type: 'value',
+            name: seriesLabel,
+            position: 'left',
+            scale: true,
+            axisLine: { lineStyle: { color: '#1e293b' } },
+            axisLabel: {
+              color: '#94a3b8',
+              fontFamily: 'JetBrains Mono',
+              fontSize: 11,
+              formatter: yAxisFormatter
+            },
+            splitLine: {
+              show: true,
+              lineStyle: {
+                color: function(value) {
+                  return value === 0 ? '#64748b' : '#0f172a';
+                },
+                width: function(value) {
+                  return value === 0 ? 1.5 : 1;
+                },
+                type: function(value) {
+                  return value === 0 ? 'solid' : 'dashed';
+                }
+              }
+            }
+          },
+          {
+            type: 'value',
+            name: `${activeCurrency} Price (USD)`,
+            position: 'right',
+            scale: true,
+            axisLine: { lineStyle: { color: '#1e293b' } },
+            axisLabel: {
+              color: '#e2e8f0',
+              fontFamily: 'JetBrains Mono',
+              fontSize: 11,
+              formatter: '${value}'
+            },
+            splitLine: { show: false }
+          }
+        ],
+        dataZoom: [
+          {
+            type: 'inside',
+            start: 60,
+            end: 100
+          },
+          {
+            type: 'slider',
+            show: true,
+            bottom: 15,
+            height: 30,
+            borderColor: '#1e293b',
+            fillerColor: 'rgba(56, 189, 248, 0.18)',
+            backgroundColor: '#0d1117',
+            handleStyle: { color: '#38bdf8', borderColor: '#0284c7' },
+            textStyle: { color: '#64748b', fontFamily: 'JetBrains Mono', fontSize: 10 },
+            start: 60,
+            end: 100
+          }
+        ],
+        series: [
+          {
+            name: seriesLabel,
+            type: 'bar',
+            yAxisIndex: 0,
+            data: seriesData,
+            barWidth: 3,
+            barMaxWidth: 4,
+            barCategoryGap: '10%',
+            itemStyle: {
+              color: function(params) {
+                return params.value >= 0 ? '#10b981' : '#ef4444';
+              }
+            }
+          },
+          {
+            name: 'Price',
+            type: 'line',
+            yAxisIndex: 1,
+            data: priceData,
+            smooth: 0.15,
+            showSymbol: false,
+            lineStyle: {
+              color: '#ffffff',
+              width: 1.8
+            }
+          }
+        ]
+      };
+    }
+
+    myChart.setOption(buildOption());
+    window.addEventListener('resize', () => myChart.resize());
+
+    // Update Stats HUD (Strictly for TODAY)
+    function updateStats(price, spread, dev, pct) {
+      document.getElementById('stat-price').textContent = '$' + Number(price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      
+      const elSpread = document.getElementById('stat-spread');
+      elSpread.textContent = '$' + spread.toFixed(2);
+
+      // Track TODAY'S session high and low
+      if (spread > todayMaxGap || todayMaxGap === -Infinity) {
+        todayMaxGap = spread;
+      }
+      if (spread < todayMinGap || todayMinGap === Infinity) {
+        todayMinGap = spread;
+      }
+
+      document.getElementById('stat-gap-max').textContent = '$' + (todayMaxGap !== -Infinity ? todayMaxGap.toFixed(2) : '0.00');
+      document.getElementById('stat-gap-min').textContent = '$' + (todayMinGap !== Infinity ? todayMinGap.toFixed(2) : '0.00');
+      const gapRange = (todayMaxGap !== -Infinity && todayMinGap !== Infinity) ? Math.max(0, todayMaxGap - todayMinGap) : 0.0;
+      document.getElementById('stat-gap-range').textContent = '$' + gapRange.toFixed(2);
+
+      document.getElementById('stat-baseline').textContent = '$' + baselineEma.toFixed(2);
+
+      const elDev = document.getElementById('stat-dev');
+      elDev.textContent = (dev >= 0 ? '+$' : '-$') + Math.abs(dev).toFixed(2);
+      elDev.className = 'value ' + (dev >= 0 ? 'green' : 'red');
+
+      document.getElementById('stat-count').textContent = timestamps.length;
+    }
+
+    // Append Tick
+    function appendTick(timeStr, price, spread, pct, customDev = null) {
+      if (!baselineInitialized) {
+        baselineEma = spread;
+        baselineInitialized = true;
+      } else {
+        baselineEma = 0.96 * baselineEma + 0.04 * spread;
+      }
+
+      const deviation = customDev !== null && customDev !== 0 ? customDev : (spread - baselineEma);
+
+      timestamps.push(timeStr);
+      priceData.push(price);
+      rawSpreadData.push(spread);
+      deviationData.push(Number(deviation.toFixed(3)));
+      pctData.push(pct);
+
+      if (timestamps.length > 2500) {
+        timestamps.shift();
+        priceData.shift();
+        rawSpreadData.shift();
+        deviationData.shift();
+        pctData.shift();
+      }
+
+      updateStats(price, spread, deviation, pct);
+    }
+
+    // Load Persistent History from SQLite on Startup or Refresh
+    async function loadSavedHistory(currency = 'ETH') {
+      document.getElementById('ws-text').textContent = `LOADING ${currency} HISTORY...`;
+      try {
+        const res = await fetch(`/api/coinglass-history?currency=${currency}&limit=800`);
+        const data = await res.json();
+        
+        timestamps = [];
+        priceData = [];
+        rawSpreadData = [];
+        deviationData = [];
+        pctData = [];
+        baselineInitialized = false;
+        todayMaxGap = -Infinity;
+        todayMinGap = Infinity;
+
+        // Apply TODAY'S high/low
+        if (data.today_high_low && data.today_high_low.count > 0) {
+          todayMaxGap = data.today_high_low.max_gap;
+          todayMinGap = data.today_high_low.min_gap;
+          document.getElementById('stat-gap-max').textContent = '$' + todayMaxGap.toFixed(2);
+          document.getElementById('stat-gap-min').textContent = '$' + todayMinGap.toFixed(2);
+          document.getElementById('stat-gap-range').textContent = '$' + data.today_high_low.gap_range.toFixed(2);
+        }
+
+        if (data && data.items && data.items.length) {
+          data.items.forEach(d => {
+            appendTick(d.time, d.price, d.spread, d.pct, d.deviation || null);
+          });
+          myChart.setOption(buildOption(), true);
+          document.getElementById('ws-text').textContent = `RESTORED (${data.items.length} TICKS)`;
+        } else {
+          myChart.setOption(buildOption(), true);
+          document.getElementById('ws-text').textContent = 'READY (LISTENING)';
+        }
+      } catch (err) {
+        console.error("Could not fetch history:", err);
+      }
+    }
+
+    // Switch between ETH and BTC
+    function switchCurrency(curr) {
+      if (activeCurrency === curr) return;
+      activeCurrency = curr;
+      document.getElementById('btn-eth').className = 'currency-btn' + (curr === 'ETH' ? ' active' : '');
+      document.getElementById('btn-btc').className = 'currency-btn' + (curr === 'BTC' ? ' active' : '');
+      document.getElementById('chart-title').textContent = `${curr} Arbitrage Spikes & Gap Tracker`;
+      loadSavedHistory(curr);
+    }
+
+    // Daily History Modal Functions
+    async function openDailyHistoryModal() {
+      document.getElementById('dailyHistoryModal').classList.remove('hidden');
+      document.getElementById('modal-title').textContent = `📅 Day-by-Day Gap High / Low History (${activeCurrency})`;
+      const tbody = document.getElementById('daily-table-body');
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">Fetching records...</td></tr>`;
+
+      try {
+        const res = await fetch(`/api/daily-gap-history?currency=${activeCurrency}&limit=30`);
+        const data = await res.json();
+        if (data && data.days && data.days.length) {
+          tbody.innerHTML = '';
+          data.days.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td style="font-weight: 600; color: #ffffff;">${row.date}</td>
+              <td><span class="badge badge-blue">${row.currency}</span></td>
+              <td><span class="badge badge-green">+$${Number(row.max_gap).toFixed(2)}</span></td>
+              <td><span class="badge badge-red">-$${Math.abs(Number(row.min_gap)).toFixed(2)}</span></td>
+              <td><span class="badge badge-yellow">$${Number(row.gap_range).toFixed(2)}</span></td>
+              <td>$${Number(row.avg_gap).toFixed(2)}</td>
+              <td style="color: #94a3b8;">${row.total_ticks.toLocaleString()}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } else {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">No daily summary records recorded yet for ${activeCurrency}.</td></tr>`;
+        }
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #ef4444; padding: 20px;">Error loading: ${e.message}</td></tr>`;
+      }
+    }
+
+    function closeDailyHistoryModal() {
+      document.getElementById('dailyHistoryModal').classList.add('hidden');
+    }
+
+    // Throttled Chart Update
+    let renderPending = false;
+    function scheduleChartUpdate() {
+      if (!renderPending) {
+        renderPending = true;
+        requestAnimationFrame(() => {
+          let seriesData = currentMode === 'deviation' ? deviationData : (currentMode === 'raw_usd' ? rawSpreadData : pctData);
+          myChart.setOption({
+            xAxis: { data: timestamps },
+            series: [
+              { data: seriesData },
+              { data: priceData }
+            ]
+          });
+          renderPending = false;
+        });
+      }
+    }
+
+    // WebSocket Connection
+    function connectWebSocket() {
+      const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsHost = window.location.host || 'localhost:8000';
+      const wsUrl = `${wsProto}//${wsHost}/ws`;
+
+      const ws = new WebSocket(wsUrl);
+      const dot = document.getElementById('ws-dot');
+      const text = document.getElementById('ws-text');
+
+      ws.onopen = () => {
+        dot.className = 'status-dot connected';
+        text.textContent = 'LIVE STREAMING';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'INIT_HISTORY') return;
+
+          const msgCurr = msg.active_currency || 'ETH';
+          if (msgCurr !== activeCurrency) return;
+
+          const timeStr = msg.time_str || new Date().toLocaleTimeString();
+          const price = msg.mt5_mid || msg.delta_mid || 0;
+          const spread = msg.spread_usd || 0;
+          const pct = msg.spread_pct || 0;
+
+          if (price > 0) {
+            appendTick(timeStr, price, spread, pct);
+            scheduleChartUpdate();
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      ws.onclose = () => {
+        dot.className = 'status-dot';
+        text.textContent = 'RECONNECTING...';
+        setTimeout(connectWebSocket, 2000);
+      };
+
+      ws.onerror = () => ws.close();
+    }
+
+    // Initial Startup
+    loadSavedHistory(activeCurrency).then(() => {
+      connectWebSocket();
+    });
+
+    // Mode Toggle
+    document.getElementById('mode-select').addEventListener('change', (e) => {
+      currentMode = e.target.value;
+      myChart.setOption(buildOption(), true);
+    });
+
+    // Sync DB Button
+    document.getElementById('btn-sync').addEventListener('click', () => {
+      loadSavedHistory(activeCurrency);
+    });
+  </script>
+</body>
+</html>

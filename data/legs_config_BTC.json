@@ -1,0 +1,42 @@
+[
+  {
+    "leg_id": 1,
+    "enabled": true,
+    "diff_to_trade": 3.0,
+    "diff_to_cut": 5.0,
+    "trade_size": 0.01,
+    "target_profit_usd": 5.0
+  },
+  {
+    "leg_id": 2,
+    "enabled": true,
+    "diff_to_trade": 60.0,
+    "diff_to_cut": 10.0,
+    "trade_size": 0.01,
+    "target_profit_usd": 7.5
+  },
+  {
+    "leg_id": 3,
+    "enabled": true,
+    "diff_to_trade": 80.0,
+    "diff_to_cut": 15.0,
+    "trade_size": 0.015,
+    "target_profit_usd": 10.0
+  },
+  {
+    "leg_id": 4,
+    "enabled": true,
+    "diff_to_trade": 100.0,
+    "diff_to_cut": 20.0,
+    "trade_size": 0.02,
+    "target_profit_usd": 15.0
+  },
+  {
+    "leg_id": 5,
+    "enabled": true,
+    "diff_to_trade": 120.0,
+    "diff_to_cut": 25.0,
+    "trade_size": 0.025,
+    "target_profit_usd": 20.0
+  }
+]

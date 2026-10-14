@@ -25,6 +25,7 @@ load_dotenv_simple()
 class Config:
     # MetaTrader 5 Settings
     MT5_SYMBOL: str = os.getenv("MT5_SYMBOL", "BTCUSD")
+    MT5_PATH: Optional[str] = os.getenv("MT5_PATH", "")
     MT5_RETRY_INTERVAL: float = 1.0
     
     # Delta Exchange Settings

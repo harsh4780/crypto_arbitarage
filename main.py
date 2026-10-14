@@ -73,6 +73,7 @@ def main():
     parser.add_argument("--exchange", choices=["binance", "bybit", "deribit", "delta"], default="binance",
                         help="Futures exchange source: 'binance' (Default Demo/Live), 'bybit', 'deribit', or 'delta'")
     parser.add_argument("--mt5-symbol", type=str, default=config.MT5_SYMBOL, help="MT5 Symbol (e.g. BTCUSD, ETHUSD)")
+    parser.add_argument("--mt5-path", type=str, default=config.MT5_PATH, help="Full path to MT5 terminal64.exe (e.g. 'C:\\Program Files\\MetaTrader 5\\terminal64.exe')")
     parser.add_argument("--contract", type=str, default=config.BINANCE_COIN_CONTRACT or "ETHUSD_261225", help="Futures contract symbol (e.g. ETHUSD_261225)")
     parser.add_argument("--min-spread", type=float, default=config.MIN_SPREAD_USD, help="Min spread USD threshold")
     
@@ -80,9 +81,11 @@ def main():
 
     # Apply CLI args to config
     config.MT5_SYMBOL = args.mt5_symbol
+    if args.mt5_path:
+        config.MT5_PATH = args.mt5_path
     config.MIN_SPREAD_USD = args.min_spread
 
-    mt5_conn = MT5Connector(symbol=config.MT5_SYMBOL)
+    mt5_conn = MT5Connector(symbol=config.MT5_SYMBOL, path=config.MT5_PATH)
     
     if args.exchange == "binance":
         futures_conn = BinanceConnector(testnet=config.BINANCE_TESTNET, api_key=config.BINANCE_API_KEY, api_secret=config.BINANCE_API_SECRET)
@@ -91,7 +94,8 @@ def main():
     else:
         futures_conn = DeltaConnector(symbol=config.DELTA_SYMBOL, api_key=config.DELTA_API_KEY, api_secret=config.DELTA_API_SECRET)
         
-    engine = ArbitrageEngine(diff_to_trade=config.MIN_SPREAD_USD)
+    curr = "BTC" if "BTC" in args.mt5_symbol else "ETH"
+    engine = ArbitrageEngine(currency=curr, diff_to_trade=config.MIN_SPREAD_USD)
 
     mode_tag = "Demo Account (Testnet)" if ((args.exchange == "binance" and config.BINANCE_TESTNET) or (args.exchange == "bybit" and config.BYBIT_TESTNET)) else "Live"
     print("=" * 75)

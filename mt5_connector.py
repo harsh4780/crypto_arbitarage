@@ -4,16 +4,19 @@ MetaTrader 5 Price Connector
 Fetches real-time ETH Spot price ticks from MetaTrader 5 (MT5).
 """
 
+import os
 import time
 import logging
 from typing import Dict, Any, Optional
 import MetaTrader5 as mt5
+from config import config
 
 logger = logging.getLogger(__name__)
 
 class MT5Connector:
-    def __init__(self, symbol: str = "ETHUSD"):
+    def __init__(self, symbol: str = "ETHUSD", path: Optional[str] = None):
         self.symbol = symbol
+        self.path = path or config.MT5_PATH
         self.is_connected = False
         self.last_tick: Optional[Dict[str, Any]] = None
 
@@ -24,9 +27,28 @@ class MT5Connector:
             mt5.symbol_select(self.symbol, True)
         logger.info(f"[MT5] Symbol changed to {self.symbol}")
 
-    def connect(self) -> bool:
-        """Initialize connection to MetaTrader 5 terminal."""
-        if not mt5.initialize():
+    def set_path(self, path: str):
+        """Set terminal executable path and reconnect."""
+        self.path = path.strip('\"\'') if path else ""
+        if self.is_connected:
+            self.disconnect()
+        return self.connect()
+
+    def connect(self, custom_path: Optional[str] = None) -> bool:
+        """Initialize connection to MetaTrader 5 terminal with optional custom path."""
+        target_path = custom_path or self.path or config.MT5_PATH
+        if target_path:
+            clean_path = os.path.abspath(target_path.strip('\"\''))
+            if os.path.exists(clean_path):
+                logger.info(f"[MT5] Connecting to custom terminal path: {clean_path}")
+                init_ok = mt5.initialize(path=clean_path)
+            else:
+                logger.warning(f"[MT5] Specified path '{clean_path}' not found on disk. Attempting default initialize...")
+                init_ok = mt5.initialize()
+        else:
+            init_ok = mt5.initialize()
+
+        if not init_ok:
             logger.error(f"[MT5] Initialization failed: {mt5.last_error()}")
             self.is_connected = False
             return False
@@ -94,6 +116,13 @@ class MT5Connector:
         if not tick or not info:
             return {"success": False, "error": f"Symbol info unavailable for {target_symbol}"}
 
+        # Validate & guard order volume
+        vol = float(volume)
+        min_vol = getattr(info, "volume_min", 0.01) or 0.01
+        if vol <= 0:
+            vol = min_vol
+            logger.warning(f"[MT5] Provided volume {volume} lots is invalid! Auto-corrected to minimum volume {vol} lots for {target_symbol}.")
+
         # Determine price & order_type
         if order_type.upper() == "BUY":
             price = tick.ask
@@ -123,7 +152,7 @@ class MT5Connector:
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
                 "symbol": target_symbol,
-                "volume": float(volume),
+                "volume": float(vol),
                 "type": action_type,
                 "price": price,
                 "sl": 0.0,
@@ -135,7 +164,7 @@ class MT5Connector:
                 "type_filling": fill_mode,
             }
 
-            logger.info(f"[MT5] Sending {order_type} order for {volume} lots of {target_symbol} @ {price} (fill_mode={fill_mode})")
+            logger.info(f"[MT5] Sending {order_type} order for {vol} lots of {target_symbol} @ {price} (fill_mode={fill_mode})")
             result = mt5.order_send(request)
 
             if result is None:
